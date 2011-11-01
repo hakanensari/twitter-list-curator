@@ -63,8 +63,8 @@ topics.each do |topic|
   handles.delete('guardian')
 
   (1..4).each do |count|
-    break if handles.count < 300
-    handles.select! { |k, v| v >= count }
+    selected = handles.select { |k, v| v >= count }
+    selected.count < 200 ? break : handles = selected
   end
 
   handles.keys.each_slice(50) do |batch|
