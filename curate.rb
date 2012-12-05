@@ -29,70 +29,78 @@ copy    = 'Auto-curated by scraping Lanyrd'
 topics  = YAML.load_file File.expand_path '../config/topics.yml',  __FILE__
 twitter = YAML.load_file File.expand_path '../config/twitter.yml', __FILE__
 
-begin
-  Twitter.configure { |c| twitter.each { |k, v| c.send("#{k}=", v) } }
+Twitter.configure { |c| twitter.each { |k, v| c.send("#{k}=", v) } }
 
-  agent       = Mechanize.new { |a| a.user_agent_alias = 'Mac Safari' }
-  lists       = Twitter.lists.map { |list| list['name'] }
+agent       = Mechanize.new { |a| a.user_agent_alias = 'Mac Safari' }
+lists       = Twitter.lists.map { |list| list['name'] }
 
-  topics.each do |topic|
+topics.each do |topic|
+  begin
     if lists.include? topic
       Twitter.list_update topic, description: copy
     else
       Twitter.list_create topic, description: copy
     end
+  rescue Twitter::Error
+    retry
+  end
 
-    handles = {}
+  handles = {}
 
-    last = agent
-      .get("http://lanyrd.com/topics/#{topic}/past/")
-      .at('.pagination li:last-child')
-      .text
-      .to_i
+  last = agent
+    .get("http://lanyrd.com/topics/#{topic}/past/")
+    .at('.pagination li:last-child')
+    .text
+    .to_i
 
-    (1..last).each_slice(10) do |batch|
-      threads = batch.map do |count|
-        Thread.new do
-          agent
-            .get("/topics/#{topic}/past/?page=#{count}")
-            .search('.summary.url')
-            .each do |node|
-              agent.get(node[:href]) do |page|
-                page
-                  .search('.people .handle')
-                  .each do |node|
-                    handle          = node.text.gsub(/@/, '')
-                    handles[handle] = handles[handle].to_i + 1
-                  end
+  (1..last).each_slice(10) do |batch|
+    threads = batch.map do |count|
+      Thread.new do
+        agent
+          .get("/topics/#{topic}/past/?page=#{count}")
+          .search('.summary.url')
+          .each do |node|
+            agent.get(node[:href]) do |page|
+              page
+                .search('.people .handle')
+                .each do |node|
+                  handle          = node.text.gsub(/@/, '')
+                  handles[handle] = handles[handle].to_i + 1
+                end
 
-                puts "#{topic} #{handles.count}"
-              end
+              puts "#{topic} #{handles.count}"
             end
-        end
+          end
       end
-
-      threads.each(&:join)
     end
 
-    handles.delete 'guardian'
+    threads.each(&:join)
+  end
 
-    (1..10).each do |count|
-      selected = handles.select { |k, v| v >= count }
-      selected.count < 100 ? break : handles = selected
-    end
+  handles.delete 'guardian'
 
-    current = Twitter
-      .list_members(topic)
-      .map(&:screen_name)
+  (1..10).each do |count|
+    selected = handles.select { |k, v| v >= count }
+    selected.count < 25 ? break : handles = selected
+  end
 
-    (handles.keys - current).each_slice(50) do |batch|
+  current = Twitter
+    .list_members(topic)
+    .map(&:screen_name)
+
+  (handles.keys - current).each_slice(50) do |batch|
+    begin
       Twitter.list_add_members topic, batch
-    end
-
-    (current - handles.keys).each_slice(50) do |batch|
-      Twitter.list_remove_members topic, batch
+    rescue Twitter::Error
+      retry
     end
   end
-rescue Twitter::Error
-  retry
+
+  (current - handles.keys).each_slice(50) do |batch|
+    begin
+      Twitter.list_remove_members topic, batch
+    rescue Twitter::Error
+      retry
+    end
+  end
 end
