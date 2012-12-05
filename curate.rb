@@ -81,7 +81,7 @@ topics.each do |topic|
 
   (1..10).each do |count|
     selected = handles.select { |k, v| v >= count }
-    selected.count < 25 ? break : handles = selected
+    selected.count < 60 ? break : handles = selected
   end
 
   begin
