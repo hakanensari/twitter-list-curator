@@ -50,22 +50,28 @@ begin
       .text
       .to_i
 
-    (1..last).each do |count|
-      agent
-        .get("/topics/#{topic}/past/?page=#{count}")
-        .search('.summary.url')
-        .each do |node|
-          agent.get(node[:href]) do |page|
-            page
-              .search('.people .handle')
-              .each do |node|
-                handle          = node.text.gsub(/@/, '')
-                handles[handle] = handles[handle].to_i + 1
-              end
+    (1..last).each_slice(10) do |batch|
+      threads = batch.map do |count|
+        Thread.new do
+          agent
+            .get("/topics/#{topic}/past/?page=#{count}")
+            .search('.summary.url')
+            .each do |node|
+              agent.get(node[:href]) do |page|
+                page
+                  .search('.people .handle')
+                  .each do |node|
+                    handle          = node.text.gsub(/@/, '')
+                    handles[handle] = handles[handle].to_i + 1
+                  end
 
-            puts "#{topic} #{handles.count}"
-          end
+                puts "#{topic} #{handles.count}"
+              end
+            end
         end
+      end
+
+      threads.each(&:join)
     end
 
     handles.delete 'guardian'
