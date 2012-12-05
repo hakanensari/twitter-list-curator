@@ -84,10 +84,13 @@ topics.each do |topic|
     selected.count < 25 ? break : handles = selected
   end
 
-  current = Twitter
-    .list_members(topic)
-    .reject { |u| u.status_count < 1000 }
-    .map(&:screen_name)
+  begin
+    current = Twitter
+      .list_members(topic)
+      .map(&:screen_name)
+  rescue Twitter::Error
+    retry
+  end
 
   (handles.keys - current).each_slice(50) do |batch|
     begin
@@ -104,4 +107,5 @@ topics.each do |topic|
       retry
     end
   end
+
 end
