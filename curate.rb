@@ -34,8 +34,8 @@ Twitter.configure { |c| twitter.each { |k, v| c.send("#{k}=", v) } }
 agent       = Mechanize.new { |a| a.user_agent_alias = 'Mac Safari' }
 lists       = Twitter.lists.map { |list| list['name'] }
 
-topics.each do |topic|
   begin
+topics.shuffle.each do |topic|
     if lists.include? topic
       Twitter.list_update topic, description: copy
     else
