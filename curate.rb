@@ -86,6 +86,7 @@ topics.each do |topic|
 
   current = Twitter
     .list_members(topic)
+    .reject { |u| u.status_count < 1000 }
     .map(&:screen_name)
 
   (handles.keys - current).each_slice(50) do |batch|
