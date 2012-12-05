@@ -3,6 +3,15 @@ require 'mechanize'
 require 'twitter'
 require 'yaml'
 
+def do_it
+  begin
+    yield
+  rescue Twitter::Error => e
+    puts e.message
+    retry
+  end
+end
+
 begin
   require 'launchy'
   require 'pry'
@@ -34,15 +43,13 @@ Twitter.configure { |c| twitter.each { |k, v| c.send("#{k}=", v) } }
 agent       = Mechanize.new { |a| a.user_agent_alias = 'Mac Safari' }
 lists       = Twitter.lists.map { |list| list['name'] }
 
-  begin
 topics.shuffle.each do |topic|
+  do_it do
     if lists.include? topic
       Twitter.list_update topic, description: copy
     else
       Twitter.list_create topic, description: copy
     end
-  rescue Twitter::Error
-    retry
   end
 
   handles = {}
@@ -84,37 +91,29 @@ topics.shuffle.each do |topic|
     selected.count < 60 ? break : handles = selected
   end
 
-  begin
-    current = Twitter
-      .list_members(topic)
-      .map(&:screen_name)
-  rescue Twitter::Error
-    retry
-  end
+  current = do_it do
+      Twitter
+        .list_members(topic)
+        .map(&:screen_name)
+    end
 
   (handles.keys - current).each_slice(50) do |batch|
-    begin
+    do_it do
       Twitter.list_add_members topic, batch
-    rescue Twitter::Error
-      retry
     end
   end
 
   (current - handles.keys).each_slice(50) do |batch|
-    begin
+    do_it do
       Twitter.list_remove_members topic, batch
-    rescue Twitter::Error
-      retry
     end
   end
 
-  begin
+  do_it do
     Twitter.list_remove_members topic,
       Twitter
         .list_members(topic)
         .find_all { |u| u.status_count < 1000 }
         .map(&:screen_name)
-  rescue Twitter::Error
-    retry
   end
 end
