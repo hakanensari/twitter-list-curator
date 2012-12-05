@@ -108,4 +108,13 @@ topics.each do |topic|
     end
   end
 
+  begin
+    Twitter.list_remove_members topic,
+      Twitter
+        .list_members(topic)
+        .find_all { |u| u.status_count < 1000 }
+        .map(&:screen_name)
+  rescue Twitter::Error
+    retry
+  end
 end
