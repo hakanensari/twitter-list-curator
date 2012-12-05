@@ -1,3 +1,4 @@
+require 'bundler/setup'
 require 'mechanize'
 require 'twitter'
 require 'yaml'
