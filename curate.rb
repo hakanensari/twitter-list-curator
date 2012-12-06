@@ -88,7 +88,7 @@ topics.shuffle.each do |topic|
 
   (1..10).each do |count|
     selected = handles.select { |k, v| v >= count }
-    selected.count < 60 ? break : handles = selected
+    selected.count < 100 ? break : handles = selected
   end
 
   current = do_it do
