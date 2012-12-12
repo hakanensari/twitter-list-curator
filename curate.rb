@@ -60,7 +60,7 @@ topics.shuffle.each do |topic|
     .text
     .to_i
 
-  (1..last).each_slice(10) do |batch|
+  (1..last).each_slice(50) do |batch|
     threads = batch.map do |count|
       Thread.new do
         agent
