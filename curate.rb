@@ -97,15 +97,15 @@ topics.shuffle.each do |topic|
         .map(&:screen_name)
     end
 
-  (handles.keys - current).each_slice(10) do |batch|
+  (current - handles.keys).each_slice(20) do |batch|
     do_it do
-      Twitter.list_add_members topic, batch
+      Twitter.list_remove_members topic, batch
     end
   end
 
-  (current - handles.keys).each_slice(10) do |batch|
+  (handles.keys - current).each_slice(20) do |batch|
     do_it do
-      Twitter.list_remove_members topic, batch
+      Twitter.list_add_members topic, batch
     end
   end
 
@@ -114,7 +114,7 @@ topics.shuffle.each do |topic|
       .list_members(topic)
       .find_all { |u| u.status_count < 1000 }
       .map(&:screen_name)
-      .each_slice(10) do |batch|
+      .each_slice(20) do |batch|
         Twitter.list_remove_members topic, batch
       end
   end
