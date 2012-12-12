@@ -3,7 +3,7 @@ require 'mechanize'
 require 'twitter'
 require 'yaml'
 
-def do_it
+def _
   begin
     yield
   rescue Twitter::Error => e
@@ -44,7 +44,7 @@ agent       = Mechanize.new { |a| a.user_agent_alias = 'Mac Safari' }
 lists       = Twitter.lists.map { |list| list['name'] }
 
 topics.shuffle.each do |topic|
-  do_it do
+  _ do
     if lists.include? topic
       Twitter.list_update topic, description: copy
     else
@@ -91,30 +91,30 @@ topics.shuffle.each do |topic|
     selected.count < 100 ? break : handles = selected
   end
 
-  current = do_it do
+  current = _ do
       Twitter
         .list_members(topic)
         .map(&:screen_name)
     end
 
-  (current - handles.keys).each_slice(20) do |batch|
-    do_it do
+  (current - handles.keys).each_slice(50) do |batch|
+    _ do
       Twitter.list_remove_members topic, batch
     end
   end
 
-  (handles.keys - current).each_slice(20) do |batch|
-    do_it do
+  (handles.keys - current).each_slice(100) do |batch|
+    _ do
       Twitter.list_add_members topic, batch
     end
   end
 
-  do_it do
+  _ do
     Twitter
       .list_members(topic)
       .find_all { |u| u.status_count < 1000 }
       .map(&:screen_name)
-      .each_slice(20) do |batch|
+      .each_slice(50) do |batch|
         Twitter.list_remove_members topic, batch
       end
   end
